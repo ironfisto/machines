@@ -1,0 +1,18 @@
+---
+- name: Set up HackTheBox attack machine
+  hosts: localhost
+  connection: local
+  become: false
+  vars_files:
+    - vars/tools.yml
+  roles:
+    - { role: base, tags: [base] }
+    - { role: ssh, tags: [ssh] }
+    - { role: firewall, tags: [firewall] }
+    - { role: tools, tags: [tools] }
+    - { role: helpers, tags: [helpers] }
+  post_tasks:
+    - name: Report tools that failed to install
+      ansible.builtin.debug:
+        msg: "{{ install_failures | default([]) }}"
+      tags: [always]

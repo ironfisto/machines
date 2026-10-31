@@ -1,0 +1,26 @@
+#!/usr/bin/env bash
+# htb-vpn <file.ovpn>   connect
+# htb-vpn stop          disconnect
+# htb-vpn status        show the VPN address
+set -euo pipefail
+
+case "${1:-status}" in
+  stop)
+    sudo pkill -x openvpn && echo "VPN stopped" || echo "VPN was not running"
+    ;;
+  status)
+    ip -brief -4 addr show tun0 2>/dev/null || echo "VPN is not connected"
+    ;;
+  *)
+    sudo openvpn --config "$1" --daemon --log /var/log/htb-openvpn.log
+    for _ in {1..15}; do
+      if ip -brief -4 addr show tun0 2>/dev/null | grep -q .; then
+        ip -brief -4 addr show tun0
+        exit 0
+      fi
+      sleep 1
+    done
+    echo "VPN did not come up. Check /var/log/htb-openvpn.log" >&2
+    exit 1
+    ;;
+esac

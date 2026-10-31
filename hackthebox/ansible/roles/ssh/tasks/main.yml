@@ -1,0 +1,73 @@
+---
+- name: Install OpenSSH server
+  ansible.builtin.apt:
+    name: openssh-server
+    state: present
+
+- name: Find the home directory of the target user
+  ansible.builtin.getent:
+    database: passwd
+    key: "{{ target_user }}"
+
+- name: Set SSH paths
+  ansible.builtin.set_fact:
+    user_ssh_dir: "{{ ansible_facts.getent_passwd[target_user][4] }}/.ssh"
+
+- name: Create the .ssh directory
+  ansible.builtin.file:
+    path: "{{ user_ssh_dir }}"
+    state: directory
+    owner: "{{ target_user }}"
+    mode: "0700"
+
+- name: Create authorized_keys
+  ansible.builtin.file:
+    path: "{{ user_ssh_dir }}/authorized_keys"
+    state: touch
+    owner: "{{ target_user }}"
+    mode: "0600"
+    access_time: preserve
+    modification_time: preserve
+
+- name: Add keys from the repo
+  ansible.builtin.lineinfile:
+    path: "{{ user_ssh_dir }}/authorized_keys"
+    line: "{{ item }}"
+  loop: "{{ lookup('ansible.builtin.file', playbook_dir ~ '/../authorized_keys').splitlines() | reject('match', '^\\s*(#|$)') | list }}"
+
+- name: Check whether the user has a usable key
+  ansible.builtin.command:
+    cmd: grep -qE '^(ssh-|ecdsa-|sk-)' {{ user_ssh_dir }}/authorized_keys
+  register: key_check
+  changed_when: false
+  failed_when: false
+
+# On Ubuntu 24.04, sshd is socket-activated and this may not exist yet, which breaks sshd -t.
+- name: Create the sshd runtime directory
+  ansible.builtin.file:
+    path: /run/sshd
+    state: directory
+    mode: "0755"
+
+- name: Write SSH hardening config
+  ansible.builtin.template:
+    src: 10-hardening.conf.j2
+    dest: /etc/ssh/sshd_config.d/10-hardening.conf
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  vars:
+    password_auth: "{{ 'no' if key_check.rc == 0 else 'yes' }}"
+  notify: Restart SSH
+
+- name: Enable and start SSH
+  ansible.builtin.service:
+    name: ssh
+    enabled: true
+    state: started
+
+- name: Warn when password login is still on
+  ansible.builtin.debug:
+    msg: >-
+      No SSH key found for {{ target_user }}, so password login stays on.
+      Add a key to authorized_keys and run: sudo ./bootstrap.sh --tags ssh
+  when: key_check.rc != 0

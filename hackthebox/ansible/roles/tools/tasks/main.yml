@@ -1,0 +1,171 @@
+---
+# One broken tool shouldn't stop a long setup. Failures are collected and reported at the end.
+
+- name: Create tool directories
+  ansible.builtin.file:
+    path: "{{ item }}"
+    state: directory
+    mode: "0755"
+  loop:
+    - "{{ tools_dir }}"
+    - "{{ tools_dir }}/linux"
+    - "{{ tools_dir }}/windows"
+    - /usr/share/wordlists
+
+- name: Install apt tools
+  ansible.builtin.apt:
+    name: "{{ item }}"
+    state: present
+  loop: "{{ apt_optional }}"
+  register: result
+  ignore_errors: true
+
+- name: Record apt failures
+  ansible.builtin.import_tasks: record_failures.yml
+
+- name: Install tools from GitHub releases
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - "{{ role_path }}/files/gh_install.py"
+      - "{{ item.repo }}"
+      - "{{ item.pattern }}"
+      - "--name={{ item.name }}"
+      - "--member={{ item.member | default(item.name) }}"
+      - "--dest=/usr/local/bin"
+    creates: "/usr/local/bin/{{ item.name }}"
+  loop: "{{ release_binaries }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: result
+  ignore_errors: true
+
+- name: Record release failures
+  ansible.builtin.import_tasks: record_failures.yml
+
+- name: Download binaries to transfer to targets
+  ansible.builtin.command:
+    argv:
+      - /usr/bin/python3
+      - "{{ role_path }}/files/gh_install.py"
+      - "{{ item.repo }}"
+      - "{{ item.pattern }}"
+      - "--name={{ item.name }}"
+      - "--member={{ item.member | default(item.name) }}"
+      - "--dest={{ tools_dir }}/{{ item.dest }}"
+    creates: "{{ tools_dir }}/{{ item.dest }}/{{ item.name }}"
+  loop: "{{ transfer_binaries }}"
+  loop_control:
+    label: "{{ item.dest }}/{{ item.name }}"
+  register: result
+  ignore_errors: true
+
+- name: Record transfer binary failures
+  ansible.builtin.import_tasks: record_failures.yml
+
+# Installed system-wide so the tools also work under sudo, which many of them need.
+- name: Install Python tools
+  ansible.builtin.command:
+    cmd: "pipx install {{ item.spec }}"
+    creates: "/opt/pipx/venvs/{{ item.name }}"
+  environment:
+    PIPX_HOME: /opt/pipx
+    PIPX_BIN_DIR: /usr/local/bin
+  loop: "{{ pipx_tools }}"
+  loop_control:
+    label: "{{ item.name }}"
+  register: result
+  ignore_errors: true
+
+- name: Record Python failures
+  ansible.builtin.import_tasks: record_failures.yml
+
+- name: Install Ruby tools
+  ansible.builtin.command:
+    cmd: "gem install --no-document {{ item }}"
+    creates: "/usr/local/bin/{{ item }}"
+  loop: "{{ gem_tools }}"
+  register: result
+  ignore_errors: true
+
+- name: Record Ruby failures
+  ansible.builtin.import_tasks: record_failures.yml
+
+- name: Clone git tools
+  ansible.builtin.git:
+    repo: "{{ item.repo }}"
+    dest: "{{ item.dest }}"
+    depth: 1
+    update: false
+  loop: "{{ git_tools }}"
+  loop_control:
+    label: "{{ item.dest }}"
+  register: result
+  ignore_errors: true
+
+- name: Record git failures
+  ansible.builtin.import_tasks: record_failures.yml
+
+- name: Link git tool commands
+  ansible.builtin.file:
+    src: "{{ item.dest }}/{{ item.target }}"
+    dest: "/usr/local/bin/{{ item.link }}"
+    state: link
+    force: true
+  loop: "{{ git_tools | selectattr('link', 'defined') | list }}"
+  loop_control:
+    label: "{{ item.link }}"
+  ignore_errors: true
+
+# Responder expects to run from its own directory.
+- name: Add responder command
+  ansible.builtin.copy:
+    dest: /usr/local/bin/responder
+    mode: "0755"
+    content: |
+      #!/bin/sh
+      cd /opt/tools/Responder && exec python3 Responder.py "$@"
+
+- name: Clone SecLists
+  ansible.builtin.git:
+    repo: https://github.com/danielmiessler/SecLists.git
+    dest: /usr/share/seclists
+    depth: 1
+    update: false
+  register: seclists
+  ignore_errors: true
+
+- name: Record SecLists failure
+  ansible.builtin.set_fact:
+    install_failures: "{{ install_failures | default([]) + ['SecLists'] }}"
+  when: seclists is failed
+
+- name: Unpack rockyou.txt
+  ansible.builtin.unarchive:
+    src: /usr/share/seclists/Passwords/Leaked-Databases/rockyou.txt.tar.gz
+    dest: /usr/share/wordlists
+    remote_src: true
+    creates: /usr/share/wordlists/rockyou.txt
+  when: seclists is succeeded
+  register: rockyou
+  ignore_errors: true
+
+- name: Record rockyou failure
+  ansible.builtin.set_fact:
+    install_failures: "{{ install_failures | default([]) + ['rockyou.txt'] }}"
+  when: rockyou is failed
+
+- name: Install Metasploit
+  ansible.builtin.shell:
+    cmd: >-
+      curl -fsSL https://raw.githubusercontent.com/rapid7/metasploit-omnibus/master/config/templates/metasploit-framework-wrappers/msfupdate.erb
+      -o /tmp/msfinstall && chmod 755 /tmp/msfinstall && /tmp/msfinstall
+    creates: /opt/metasploit-framework/bin/msfconsole
+  when: install_metasploit | bool
+  register: metasploit
+  ignore_errors: true
+
+- name: Record Metasploit failure
+  ansible.builtin.set_fact:
+    install_failures: "{{ install_failures | default([]) + ['metasploit'] }}"
+  when: metasploit is failed

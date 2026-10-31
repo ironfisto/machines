@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Open a port to VPN traffic, for reverse shells and file transfers. Everything else stays blocked.
+#   htb-listen 4444         open
+#   htb-listen close 4444   close
+#   htb-listen list         show open rules
+set -euo pipefail
+
+usage() {
+  echo "Usage: htb-listen <port> | close <port> | list" >&2
+  exit 1
+}
+
+is_port() {
+  [[ "$1" =~ ^[0-9]+$ ]] && (( "$1" >= 1 && "$1" <= 65535 ))
+}
+
+case "${1:-}" in
+  list)
+    sudo ufw status numbered
+    ;;
+  close)
+    is_port "${2:-}" || usage
+    sudo ufw delete allow in on tun0 to any port "$2"
+    ;;
+  *)
+    is_port "${1:-}" || usage
+    sudo ufw allow in on tun0 to any port "$1"
+    ;;
+esac

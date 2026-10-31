@@ -1,0 +1,15 @@
+---
+- name: Check target_user was passed by bootstrap.sh
+  ansible.builtin.assert:
+    that: target_user is defined and target_user | length > 0
+    fail_msg: "Run this through: sudo ./bootstrap.sh"
+
+- name: Upgrade existing packages
+  ansible.builtin.apt:
+    update_cache: true
+    upgrade: safe
+
+- name: Install required packages
+  ansible.builtin.apt:
+    name: "{{ apt_required }}"
+    state: present

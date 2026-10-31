@@ -1,0 +1,10 @@
+---
+- name: Install helper commands
+  ansible.builtin.copy:
+    src: "{{ item }}"
+    dest: "/usr/local/bin/{{ item }}"
+    mode: "0755"
+  loop:
+    - htb-box
+    - htb-listen
+    - htb-vpn

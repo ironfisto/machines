@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# htb-box <name> [ip]   create a working folder for a target in ~/htb/boxes
+set -euo pipefail
+
+if [[ -z "${1:-}" || "$1" == */* || "$1" == .* ]]; then
+  echo "Usage: htb-box <name> [ip]" >&2
+  exit 1
+fi
+
+dir="$HOME/htb/boxes/$1"
+mkdir -p "$dir"/{scans,loot,exploits}
+
+if [[ ! -e "$dir/notes.md" ]]; then
+  cat > "$dir/notes.md" <<EOF
+# $1
+
+IP: ${2:-}
+
+## Recon
+
+## Foothold
+
+## Privilege escalation
+
+## Flags
+EOF
+fi
+
+echo "$dir"

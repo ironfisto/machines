@@ -1,0 +1,7 @@
+---
+- name: Add failed items to the report
+  ansible.builtin.set_fact:
+    install_failures: >-
+      {{ install_failures | default([])
+         + (result.results | selectattr('failed', 'defined') | selectattr('failed')
+            | map(attribute='item') | map('string') | list) }}

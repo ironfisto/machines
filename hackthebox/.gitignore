@@ -1,0 +1,15 @@
+# HTB VPN profiles contain your private key
+*.ovpn
+vpn/
+
+# Private SSH keys
+id_rsa
+id_ed25519
+*.pem
+
+# Target data
+boxes/
+loot/
+
+*.retry
+__pycache__/

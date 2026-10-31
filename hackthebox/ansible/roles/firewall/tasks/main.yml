@@ -1,0 +1,38 @@
+---
+- name: Find the main network interface
+  ansible.builtin.setup:
+    gather_subset: [network]
+
+- name: Check a main network interface exists
+  ansible.builtin.assert:
+    that: ansible_default_ipv4.interface is defined
+    fail_msg: "No default network route, so SSH can't be allowed safely."
+
+# SSH is allowed on the LAN interface only, so nothing on the VPN can reach it.
+# Add this rule before enabling ufw, so a running SSH session isn't cut off.
+- name: Allow SSH on the main interface
+  ansible.builtin.command:
+    cmd: ufw allow in on {{ ansible_default_ipv4.interface }} to any port 22 proto tcp
+  register: ufw_ssh
+  changed_when: "'Skipping' not in ufw_ssh.stdout"
+
+- name: Deny inbound traffic by default
+  ansible.builtin.command:
+    cmd: ufw default deny incoming
+  changed_when: false
+
+- name: Allow outbound traffic by default
+  ansible.builtin.command:
+    cmd: ufw default allow outgoing
+  changed_when: false
+
+- name: Enable ufw
+  ansible.builtin.command:
+    cmd: ufw --force enable
+  changed_when: false
+
+- name: Enable fail2ban
+  ansible.builtin.service:
+    name: fail2ban
+    enabled: true
+    state: started

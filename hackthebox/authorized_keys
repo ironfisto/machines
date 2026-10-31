@@ -1,0 +1,2 @@
+# Public SSH keys allowed to log in, one per line (the contents of id_ed25519.pub).
+# Password login is turned off only once a key is present.

@@ -1,0 +1,154 @@
+---
+# Add a tool by adding a line to the right list, then re-run: sudo ./bootstrap.sh --tags tools
+#
+# In release patterns, {arch} becomes amd64/arm64 and {xarch} becomes x86_64/aarch64.
+
+tools_dir: /opt/tools
+install_metasploit: true
+
+# A failure here stops the run.
+apt_required:
+  - build-essential
+  - curl
+  - fail2ban
+  - git
+  - jq
+  - libkrb5-dev
+  - libpcap-dev
+  - openssh-server
+  - openvpn
+  - pipx
+  - python3-venv
+  - ruby
+  - ruby-dev
+  - tmux
+  - ufw
+  - unzip
+  - wget
+
+# A failure here is reported at the end, and the run continues.
+apt_optional:
+  # Network scanning
+  - arp-scan
+  - fping
+  - hping3
+  - masscan
+  - nbtscan
+  - netcat-openbsd
+  - nmap
+  - socat
+  - tcpdump
+  - tshark
+  # Network recon
+  - dnsenum
+  - dnsrecon
+  - dnsutils
+  - ike-scan
+  - mtr-tiny
+  - net-tools
+  - nfs-common
+  - onesixtyone
+  - proxychains4
+  - rpcbind
+  - smbclient
+  - snmp
+  - snmp-mibs-downloader
+  - traceroute
+  - whois
+  # Windows and Active Directory
+  - cifs-utils
+  - freerdp2-x11
+  - krb5-user
+  - ldap-utils
+  - ntpdate
+  - python3-netifaces
+  # Web
+  - nikto
+  - sqlmap
+  - whatweb
+  - wfuzz
+  # Passwords
+  - hashcat
+  - hydra
+  - john
+  # Cross-compiling and debugging exploits
+  - gcc-mingw-w64
+  - gdb
+
+# Installed to /usr/local/bin. member = file inside the archive, when it differs from name.
+release_binaries:
+  # ProjectDiscovery
+  - { name: nuclei, repo: projectdiscovery/nuclei, pattern: 'nuclei_.*_linux_{arch}\.zip$' }
+  - { name: subfinder, repo: projectdiscovery/subfinder, pattern: 'subfinder_.*_linux_{arch}\.zip$' }
+  - { name: httpx, repo: projectdiscovery/httpx, pattern: 'httpx_.*_linux_{arch}\.zip$' }
+  - { name: naabu, repo: projectdiscovery/naabu, pattern: 'naabu_.*_linux_{arch}\.zip$' }
+  - { name: dnsx, repo: projectdiscovery/dnsx, pattern: 'dnsx_.*_linux_{arch}\.zip$' }
+  - { name: katana, repo: projectdiscovery/katana, pattern: 'katana_.*_linux_{arch}\.zip$' }
+  - { name: tlsx, repo: projectdiscovery/tlsx, pattern: 'tlsx_.*_linux_{arch}\.zip$' }
+  - { name: cdncheck, repo: projectdiscovery/cdncheck, pattern: 'cdncheck_.*_linux_{arch}\.zip$' }
+  - { name: mapcidr, repo: projectdiscovery/mapcidr, pattern: 'mapcidr_.*_linux_{arch}\.zip$' }
+  - { name: asnmap, repo: projectdiscovery/asnmap, pattern: 'asnmap_.*_linux_{arch}\.zip$' }
+  - { name: uncover, repo: projectdiscovery/uncover, pattern: 'uncover_.*_linux_{arch}\.zip$' }
+  - { name: alterx, repo: projectdiscovery/alterx, pattern: 'alterx_.*_linux_{arch}\.zip$' }
+  - { name: shuffledns, repo: projectdiscovery/shuffledns, pattern: 'shuffledns_.*_linux_{arch}\.zip$' }
+  - { name: interactsh-client, repo: projectdiscovery/interactsh, pattern: 'interactsh-client_.*_linux_{arch}\.zip$' }
+  - { name: proxify, repo: projectdiscovery/proxify, pattern: 'proxify_.*_linux_{arch}\.zip$' }
+  # Directory, vhost and subdomain scanning
+  - { name: ffuf, repo: ffuf/ffuf, pattern: 'ffuf_.*_linux_{arch}\.tar\.gz$' }
+  - { name: gobuster, repo: OJ/gobuster, pattern: 'gobuster_Linux_{xarch}\.tar\.gz$' }
+  - { name: feroxbuster, repo: epi052/feroxbuster, pattern: '{xarch}-linux-feroxbuster\.(tar\.gz|zip)$' }
+  - { name: amass, repo: owasp-amass/amass, pattern: 'amass_[Ll]inux_{arch}\.(tar\.gz|zip)$' }
+  - { name: gowitness, repo: sensepost/gowitness, pattern: 'gowitness-.*-linux-{arch}$' }
+  # Port scanning
+  - { name: rustscan, repo: bee-san/RustScan, pattern: '{xarch}-linux-rustscan\.tar\.gz\.zip$' }
+  # Windows and Active Directory
+  - { name: kerbrute, repo: ropnop/kerbrute, pattern: 'kerbrute_linux_{arch}$' }
+  - { name: windapsearch, repo: ropnop/go-windapsearch, pattern: 'windapsearch-linux-{arch}$' }
+  # Pivoting
+  - { name: chisel, repo: jpillora/chisel, pattern: 'chisel_.*_linux_{arch}\.gz$' }
+  - { name: ligolo-proxy, member: proxy, repo: nicocha30/ligolo-ng, pattern: 'ligolo-ng_proxy_.*_linux_{arch}\.tar\.gz$' }
+
+# Files to upload to targets, so these match the target rather than this machine.
+transfer_binaries:
+  - { name: linpeas.sh, dest: linux, repo: peass-ng/PEASS-ng, pattern: '^linpeas\.sh$' }
+  - { name: pspy64, dest: linux, repo: DominicBreuker/pspy, pattern: '^pspy64$' }
+  - { name: chisel, dest: linux, repo: jpillora/chisel, pattern: 'chisel_.*_linux_amd64\.gz$' }
+  - { name: ligolo-agent, member: agent, dest: linux, repo: nicocha30/ligolo-ng, pattern: 'ligolo-ng_agent_.*_linux_amd64\.tar\.gz$' }
+  - { name: winPEASany.exe, dest: windows, repo: peass-ng/PEASS-ng, pattern: '^winPEASany\.exe$' }
+  - { name: chisel.exe, dest: windows, repo: jpillora/chisel, pattern: 'chisel_.*_windows_amd64\.zip$' }
+  - { name: ligolo-agent.exe, member: agent.exe, dest: windows, repo: nicocha30/ligolo-ng, pattern: 'ligolo-ng_agent_.*_windows_amd64\.zip$' }
+  - { name: mimikatz.exe, member: x64/mimikatz.exe, dest: windows, repo: gentilkiwi/mimikatz, pattern: '^mimikatz_trunk\.zip$' }
+
+pipx_tools:
+  # Windows and Active Directory
+  - { name: impacket, spec: impacket }
+  - { name: netexec, spec: 'git+https://github.com/Pennyw0rth/NetExec' }
+  - { name: bloodhound, spec: bloodhound }
+  - { name: certipy-ad, spec: certipy-ad }
+  - { name: bloodyad, spec: bloodyAD }
+  - { name: coercer, spec: coercer }
+  - { name: ldapdomaindump, spec: ldapdomaindump }
+  - { name: lsassy, spec: lsassy }
+  - { name: mitm6, spec: mitm6 }
+  - { name: smbmap, spec: smbmap }
+  - { name: enum4linux-ng, spec: 'git+https://github.com/cddmp/enum4linux-ng' }
+  # Recon and web
+  - { name: autorecon, spec: 'git+https://github.com/Tib3rius/AutoRecon' }
+  - { name: dirsearch, spec: dirsearch }
+  - { name: arjun, spec: arjun }
+  - { name: wafw00f, spec: wafw00f }
+  - { name: ssh-audit, spec: ssh-audit }
+
+gem_tools:
+  - evil-winrm
+
+# link = command name to add to /usr/local/bin.
+git_tools:
+  - { repo: 'https://gitlab.com/exploit-database/exploitdb.git', dest: /opt/exploitdb, link: searchsploit, target: searchsploit }
+  - { repo: 'https://github.com/drwetter/testssl.sh.git', dest: /opt/tools/testssl.sh, link: testssl.sh, target: testssl.sh }
+  - { repo: 'https://github.com/lgandx/Responder.git', dest: /opt/tools/Responder }
+  - { repo: 'https://github.com/swisskyrepo/PayloadsAllTheThings.git', dest: /opt/tools/PayloadsAllTheThings }
+  - { repo: 'https://github.com/samratashok/nishang.git', dest: /opt/tools/nishang }
+  - { repo: 'https://github.com/PowerShellMafia/PowerSploit.git', dest: /opt/tools/PowerSploit }
+  - { repo: 'https://github.com/r3motecontrol/Ghostpack-CompiledBinaries.git', dest: /opt/tools/windows/Ghostpack }
+  - { repo: 'https://github.com/int0x33/nc.exe.git', dest: /opt/tools/windows/nc }
