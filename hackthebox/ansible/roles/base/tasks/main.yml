@@ -4,9 +4,10 @@
     that: target_user is defined and target_user | length > 0
     fail_msg: "Run this through: sudo ./bootstrap.sh"
 
+# bootstrap.sh has already refreshed the package lists. Ansible's own refresh would
+# fail with a blank error if any single source is unreachable.
 - name: Upgrade existing packages
   ansible.builtin.apt:
-    update_cache: true
     upgrade: safe
 
 - name: Install required packages
